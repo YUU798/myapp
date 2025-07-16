@@ -27,7 +27,7 @@
       padding: 10px;
       text-align: left;
       white-space: pre-wrap;
-      color: #666666;
+      color: #666666; /* ← 紺色からグレーに変更 */
     }
     #chartContainer {
       width: 100%;
@@ -53,13 +53,13 @@
     <button onclick="addTransaction('出金')">出金</button>
   </div>
 
- <div class="section" style="text-align: center;">
-  <div>
-    <strong>現在の残高:</strong> <span id="balance">0</span> 円<br/>
-    <strong>目標金額:</strong> <span id="goalDisplay">0</span> 円<br/>
-    <strong>(^_-)-☆＜</strong> <span id="comment">未設定</span>
+  <div class="section" style="text-align: center;">
+    <div>
+      <strong>現在の残高:</strong> <span id="balance">0</span> 円<br/>
+      <strong>目標金額:</strong> <span id="goalDisplay">0</span> 円<br/>
+      <strong>(^_-)-☆＜</strong> <span id="comment">未設定</span>
+    </div>
   </div>
-</div>
 
   <div class="section">
     <button onclick="showAnalysis()">分析する❕</button>
@@ -123,59 +123,52 @@
       updateDisplay();
     }
 
-function showAnalysis() {
-  if (transactions.length === 0) {
-    document.getElementById("analysis").textContent = "履歴はありません";
-    return;
-  }
+    function showAnalysis() {
+      if (transactions.length === 0) {
+        document.getElementById("analysis").textContent = "履歴はありません";
+        return;
+      }
 
-  // テキスト履歴（そのまま）
-  const hist = transactions.map(t => {
-    const d = new Date(t.date);
-    return `- ${d.toLocaleString()} ${t.type} ${t.amount}円`;
-  }).join("\n");
-  document.getElementById("analysis").textContent = hist;
+      // テキスト履歴出力
+      const hist = transactions.map(t => {
+        const d = new Date(t.date);
+        return `- ${d.toLocaleString()} ${t.type} ${t.amount}円`;
+      }).join("\n");
+      document.getElementById("analysis").textContent = hist;
 
-  // ✅ グラフ — 月ごとの残高推移に変更
-  const monthly = {};
-  transactions.forEach(t => {
-    const d = new Date(t.date);
-    const ym = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, "0")}`;
-    monthly[ym] = (monthly[ym] || 0) + (t.type === "入金" ? t.amount : -t.amount);
-  });
+      // 月ごとの残高推移データ作成
+      const monthly = {};
+      transactions.forEach(t => {
+        const d = new Date(t.date);
+        const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthly[ym] = (monthly[ym] || 0) + (t.type === "入金" ? t.amount : -t.amount);
+      });
 
-  // 月ごとの累積残高を生成
-  const labels = [];
-  const data = [];
-  let running = 0;
+      // 月順に並べて累積残高化
+      const labels = [];
+      const data = [];
+      let running = 0;
+      Object.keys(monthly).sort().forEach(ym => {
+        running += monthly[ym];
+        labels.push(ym);
+        data.push(running);
+      });
 
-  Object.keys(monthly).sort().forEach(ym => {
-    running += monthly[ym];
-    labels.push(ym);
-    data.push(running);
-  });
-
-  // Chart.js で再描画
-  const ctx = document.getElementById("lineChart").getContext("2d");
-  if (lineChart) lineChart.destroy();
-  lineChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: '月末残高',
-        data,
-        borderColor: '#FFF3B8',
-        fill: false,
-        tension: 0.1
-      }]
-    },
-    options: {
-      scales: { y: { beginAtZero: true } },
-      animation: false
-    }
-  });
-}
+      // グラフ描画
+      const ctx = document.getElementById("lineChart").getContext("2d");
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: '月末残高',
+            data,
+            borderColor: '#FFF3B8',
+            fill: false,
+            tension: 0.1
+          }]
+        },
         options: {
           scales: {
             y: { beginAtZero: true }
