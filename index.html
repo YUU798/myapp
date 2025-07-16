@@ -123,43 +123,59 @@
       updateDisplay();
     }
 
-    function showAnalysis() {
-      if (transactions.length === 0) {
-        document.getElementById("analysis").textContent = "履歴はありません";
-        return;
-      }
+function showAnalysis() {
+  if (transactions.length === 0) {
+    document.getElementById("analysis").textContent = "履歴はありません";
+    return;
+  }
 
-      const hist = transactions.map(t => {
-        const d = new Date(t.date);
-        return `- ${d.toLocaleString()} ${t.type} ${t.amount}円`;
-      }).join("\n");
-      document.getElementById("analysis").textContent = hist;
+  // テキスト履歴（そのまま）
+  const hist = transactions.map(t => {
+    const d = new Date(t.date);
+    return `- ${d.toLocaleString()} ${t.type} ${t.amount}円`;
+  }).join("\n");
+  document.getElementById("analysis").textContent = hist;
 
-      let runningBalance = 0;
-      const labels = [];
-      const data = [];
+  // ✅ グラフ — 月ごとの残高推移に変更
+  const monthly = {};
+  transactions.forEach(t => {
+    const d = new Date(t.date);
+    const ym = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, "0")}`;
+    monthly[ym] = (monthly[ym] || 0) + (t.type === "入金" ? t.amount : -t.amount);
+  });
 
-      transactions.forEach((t, i) => {
-        runningBalance += (t.type === "入金" ? t.amount : -t.amount);
-        const d = new Date(t.date);
-        labels.push(`${i + 1}: ${d.toLocaleTimeString()}`);
-        data.push(runningBalance);
-      });
+  // 月ごとの累積残高を生成
+  const labels = [];
+  const data = [];
+  let running = 0;
 
-      const ctx = document.getElementById("lineChart").getContext("2d");
-      if (lineChart) lineChart.destroy();
-      lineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: '残高の推移',
-            data,
-            borderColor: '#FFF3B8',
-            fill: false,
-            tension: 0.1
-          }]
-        },
+  Object.keys(monthly).sort().forEach(ym => {
+    running += monthly[ym];
+    labels.push(ym);
+    data.push(running);
+  });
+
+  // Chart.js で再描画
+  const ctx = document.getElementById("lineChart").getContext("2d");
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: '月末残高',
+        data,
+        borderColor: '#FFF3B8',
+        fill: false,
+        tension: 0.1
+      }]
+    },
+    options: {
+      scales: { y: { beginAtZero: true } },
+      animation: false
+    }
+  });
+}
         options: {
           scales: {
             y: { beginAtZero: true }
